@@ -65,5 +65,21 @@ Thumbs.db
 yolov7/runs/
 sdal_utils/Data_Generator/Dataset_*/
 sdal_utils/Data_Generator/Dataset_used/
+
+# Large 3D assets (Blender files, 3D models)
+*.blend
+*.blend1
+*.fbx
+*.obj
+*.glb
+*.gltf
+sdal_utils/Data_Generator/Avatars/
+sdal_utils/Data_Generator/Scenes/
+sdal_utils/Data_Generator/Old_3DAssets/
+sdal_utils/Data_Generator/Empty.blend
+sdal_utils/Data_Generator/Horizon.blend
+
+# Temporary files
 *.pyc
+*.tmp
 
