@@ -1,0 +1,11 @@
+# train and val data
+# Modify these paths to point to your dataset locations
+train: datasets/source/train
+val: datasets/target/val
+test: datasets/target/test
+
+# number of classes
+nc: 1
+
+# class names
+names: [ 'worker' ]

@@ -1,0 +1,23 @@
+# epochs
+synth_epcohs: 200
+real_epochs: 100
+
+device: 0 # 0 for GPU, cpu for CPU
+
+# cycles
+SDAL_cycle: 20
+
+# failure cases
+failure_cases_to_generate: 50
+
+# synthetic data generation
+generation_framerate: 75
+synth_generation_premutation: 3
+
+# oracle
+decomposer_iterations: 3
+top_k: 3
+image_size: 416
+
+# wandb
+wandb_project_name: 'SDAL-Performance'

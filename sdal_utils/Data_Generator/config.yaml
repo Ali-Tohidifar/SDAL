@@ -1,0 +1,46 @@
+Framerate: 750
+Number_of_Image_Sequences: 1
+Threshold: 0.001
+avatars_dir: ./sdal_utils/Data_Generator/Avatars
+camera_location:
+- 16.682510375976562
+- 34.48617935180664
+- 7.639718055725098
+dataset_dir: ./sdal_utils/Data_Generator/Dataset
+distance: 4.316800931115759
+lighting:
+  sun_elevation: 0.9651276374033578
+  sun_state: 1.7320027840462386
+max_bounces: 4
+orientation:
+- 3.1305675616251833
+- -1.298367701740041
+- 3.141592653589774
+resolution_x: 416
+resolution_y: 416
+samples: 1024
+scene_name: Q4_construction-site-week-006_V2
+scenes_dir: ./sdal_utils/Data_Generator/Scenes
+target_avatar: Hammering1-Standing_Mixamo_Male3_V1
+tile_size: 416
+worker_bones_info:
+  Hammering1-Standing_CGtrader_Female2_V2:
+    mixamorig:Spine:
+    - 0.5244696736335754
+    - 0.3515285849571228
+    - 0.49957168102264404
+  Hammering1-Standing_CGtrader_Male3:
+    mixamorig:Spine:
+    - 0.40053948760032654
+    - 0.2774016559123993
+    - 0.34056219458580017
+  Hammering1-Standing_Mixamo_Male3_V1:
+    mixamorig:Hips:
+    - 0.5129604339599609
+    - 0.7935689091682434
+    - 1.5096752643585205
+  Hammering1-Standing_TurboSquid_Female3_Pack1:
+    mixamorig:Spine.001:
+    - 0.4177403748035431
+    - 0.9474413394927979
+    - 1.5610778331756592

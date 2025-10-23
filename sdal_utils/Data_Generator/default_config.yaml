@@ -1,0 +1,7 @@
+# Hyperparameters for rendering settings
+max_bounces: 4                      # Sets the maximum number of light bounces for ray tracing, affecting the realism and computational load.
+samples: 1024                       # Sets the number of samples per pixel for rendering, affecting image quality and render time.
+tile_size: 416                     # Defines the size of render tiles, impacting render efficiency. 
+Threshold: 0.001           # Sets the threshold for adaptive sampling, improving efficiency by reducing samples in areas with less noise.
+resolution_x: 416                  # Sets the horizontal resolution of the render to 1920 pixels.
+resolution_y: 416                  # Sets the vertical resolution of the render to 1920 pixels.

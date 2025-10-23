@@ -1,0 +1,8 @@
+names:
+- worker
+nc: 1
+test: datasets/target/val
+train:
+- datasets/synth
+- datasets/source/train
+val: datasets/target/val

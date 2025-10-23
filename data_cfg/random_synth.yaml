@@ -1,0 +1,11 @@
+# train and val data
+train: datasets/synth
+val: datasets/target/val
+test: datasets/target/test
+
+# number of classes
+nc: 1
+
+# class names
+names:
+  - worker

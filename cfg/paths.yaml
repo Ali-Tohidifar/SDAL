@@ -1,0 +1,28 @@
+# yolo dataset path
+real_data_yaml: ./data_cfg/real_5k_linux.yaml #./data_cfg/small_real.yaml
+synth_data_yaml: ./data_cfg/mid_synth_train_linux.yaml # ./data_cfg/small_synth.yaml
+
+# path to the warmed-up model weights file
+warmed_up_model_weights: ./yolov7/runs/sucessful_train/warmup_real_5k_416/weights/best.pt #./yolov7/runs/train/24-10-22-02-30_cycle_6_combined/weights/best.pt #./yolov7/runs/train/warmup_Real_5K_416/weights/best.pt #./warmed_up_models/real_10k_epoch_299.pt , ./warmed_up_models/Real_1K_416/weights/last.pt, ./warmed_up_models/Real_10K_416/weights/last.pt, 
+
+# path to the feature sets of synthetic dataset
+hdf5_path: ./features/features_DenseNet201.hdf5
+
+# path to the synthetic data generator 
+data_gen_env_dir: ./sdal_utils/Data_Generator
+
+# path to the synthetic data generated and used for SDAL
+dataset_used_dir: ./sdal_utils/Data_Generator/Dataset_used
+
+# path to data generation assets
+avatar_dir: ./sdal_utils/Data_Generator/Avatars
+scene_dir: ./sdal_utils/Data_Generator/Scenes
+empty_dir: ./sdal_utils/Data_Generator/Empty.blend
+horizon_dir: ./sdal_utils/Data_Generator/Horizon.blend
+report_dir: ./sdal_utils/Data_Generator/Report.txt
+BlendCon_dir: ./sdal_utils/Data_Generator/231109_Adaptive_Data_Generator.py
+
+# paths for coordination normalization
+old_scene_collection_dir: ./sdal_utils/Data_Generator/Old_3DAssets/Scenes
+
+log_dir: ./logs
