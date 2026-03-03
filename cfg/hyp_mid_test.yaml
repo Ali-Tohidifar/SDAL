@@ -17,6 +17,9 @@ random_selection: True
 # generation_framerate: 150
 generation_framerate: 750
 synth_generation_premutation: 1
+num_containers: 5  # Number of parallel Blender generator workers
+blender_bin: /snap/bin/blender
+keep_oracle_artifacts: false
 
 # oracle
 decomposer_iterations: 2

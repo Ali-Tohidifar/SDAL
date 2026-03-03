@@ -13,6 +13,9 @@ failure_cases_to_generate: 50
 # synthetic data generation
 generation_framerate: 75
 synth_generation_premutation: 3
+num_containers: 5  # Number of parallel Blender generator workers
+blender_bin: /snap/bin/blender
+keep_oracle_artifacts: false
 
 # oracle
 decomposer_iterations: 3
