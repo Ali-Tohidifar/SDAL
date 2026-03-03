@@ -596,16 +596,21 @@ def pram_retreival(query_image_path, model, transform, device, hdf5_path,  datas
     # Select the most probable image and its score
     most_probable, score = select_most_probable_image(image_scores)
     
-    # TODO: Remove this later.
-    #########################################################
-    ##### Fixing the path from Windows to Linux format. Remove this later.
-    #########################################################
-    # Fix the path from Windows to Linux format
+    # Path translation from Windows HDF5 to Linux paths
     if isinstance(most_probable, bytes):
         most_probable = most_probable.decode('utf-8')
     
     # Convert path separators to be compatible with the current OS
     most_probable = most_probable.replace('\\', '/')
+    
+    # Translate Windows path to Linux path
+    # Windows: D:/SyntheticData_SDAL_Features/raw_dataset/...
+    # Linux: /home/ali_tohidi/Desktop/Mount_Ext/SDAL/SyntheticData_SDAL_Features/raw_dataset/...
+    if most_probable.startswith('D:/SyntheticData_SDAL_Features'):
+        most_probable = most_probable.replace(
+            'D:/SyntheticData_SDAL_Features',
+            '/home/ali_tohidi/Desktop/Mount_Ext/SDAL/SyntheticData_SDAL_Features'
+        )
     
     # Debug
     print(f"Adjusted path: {most_probable}")
@@ -633,6 +638,10 @@ def create_data_gen_env(
         top_k=3,
         decomposer_iterations=3,
         synth_generation_premutation=3,
+        num_containers=3,
+        run_root: Path = None,
+        config_name: str = "config.json",
+        blender_bin: str = "blender",
         visualize=False, 
         default_config_dir='sdal_utils/Data_Generator/default_config.yaml', 
         track=True,
@@ -706,17 +715,40 @@ def create_data_gen_env(
         raise ValueError
 
     logger.info('Retrieved data checked successfully.')
-    # Save configuration in the active generation folder
-    output_config_yaml_path = os.path.join(data_gen_env_dir, 'config.yaml')
-    _ = create_config_yaml(most_probable_image_info, output_config_yaml_path, default_config)
+    # Save configuration in run-scoped folder (preferred) or legacy location
+    # - Docker-free pipeline: write JSON config into run_root
+    # - Legacy pipeline: write YAML config into data_gen_env_dir/config.yaml
+    default_config_with_containers = {**default_config, 'num_containers': num_containers}
 
-    # Normalize the avatar location
-    normalized = normalize_all_location(
-        scene_collection_dir=scene_collection_dir,
-        yaml_file="./sdal_utils/Data_Generator/config.yaml",
-        input_json='input_points.json',
-        output_json='output_vectors.json',
-    )
+    if run_root is not None:
+        run_root = Path(run_root)
+        run_root.mkdir(parents=True, exist_ok=True)
+        config_path = run_root / config_name
+        combined_data = {**most_probable_image_info, **default_config_with_containers}
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(combined_data, f, indent=2)
+        if logger:
+            logger.info(f"Wrote generator config JSON: {config_path}")
+
+        # Normalize the avatar location (writes back into config JSON)
+        normalized = normalize_all_location(
+            scene_collection_dir=scene_collection_dir,
+            config_file=config_path,
+            input_json=run_root / "input_points.json",
+            output_json=run_root / "output_vectors.json",
+            blender_bin=blender_bin,
+        )
+    else:
+        output_config_yaml_path = os.path.join(data_gen_env_dir, 'config.yaml')
+        _ = create_config_yaml(most_probable_image_info, output_config_yaml_path, default_config_with_containers)
+
+        normalized = normalize_all_location(
+            scene_collection_dir=scene_collection_dir,
+            config_file=output_config_yaml_path,
+            input_json='input_points.json',
+            output_json='output_vectors.json',
+            blender_bin=blender_bin,
+        )
     if normalized:
         logger.info('Normalization successful')
 

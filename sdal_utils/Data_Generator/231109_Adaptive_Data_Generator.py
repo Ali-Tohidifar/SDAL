@@ -1,10 +1,11 @@
+import argparse
+import json
 import logging
 import bpy
 import bmesh
 import math
 import random
 from mathutils import Vector
-import yaml
 import pickle
 import os
 import bpy_extras
@@ -21,17 +22,43 @@ edt_timezone = zoneinfo.ZoneInfo('America/New_York')
 timestamp_edt = timestamp_utc.astimezone(edt_timezone)
 timestamp = timestamp_edt.strftime('%y-%m-%d-%H-%M')
 
+def _parse_blender_args():
+    """
+    Blender passes its own args; our args start after '--'.
+    This keeps backward compatibility: if args are not provided we fall back to
+    reading config from ./config.yaml and writing into ./Dataset and ./logs.
+    """
+    import sys
+    argv = sys.argv
+    if "--" in argv:
+        argv = argv[argv.index("--") + 1 :]
+    else:
+        argv = []
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--config-json", type=str, default=None)
+    parser.add_argument("--dataset-dir", type=str, default=None)
+    parser.add_argument("--logs-dir", type=str, default=None)
+    parser.add_argument("--worker-id", type=int, default=None)
+    return parser.parse_args(argv)
+
+
+_args = _parse_blender_args()
+WORKER_ID = int(_args.worker_id) if _args.worker_id is not None else None
+
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('AdaptiveDataGenerator')
+logger.setLevel(logging.DEBUG)
 
-# Ensure log messages are saved to a file
-log_file = f'/workspace/logs/data_generation_{timestamp}.log'
-if not os.path.exists(os.path.dirname(log_file)):
-    os.makedirs(os.path.dirname(log_file))
-fh = logging.FileHandler(log_file)
+# Ensure log messages are saved to a file (run-scoped logs dir if provided)
+logs_dir = Path(_args.logs_dir).resolve() if _args.logs_dir else Path(os.getcwd()).resolve() / "logs"
+logs_dir.mkdir(parents=True, exist_ok=True)
+log_suffix = f"_w{WORKER_ID:02d}" if WORKER_ID is not None else ""
+log_file = logs_dir / f"data_generation_{timestamp}{log_suffix}.log"
+fh = logging.FileHandler(str(log_file))
 fh.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
@@ -42,13 +69,26 @@ Code_dir = Path(os.getcwd())
 # Code_dir = Path(os.path.join(os.getcwd(),'./sdal_utils/Data_Generator'))
 
 "Read config and user inputs"
-# Read config yamlfile
-# os.chdir(Code_dir)
-with open(Code_dir / "config.yaml", "r") as yamlfile:
-    config = yaml.load(yamlfile, Loader=yaml.FullLoader)
+# Read config json file (preferred) or fall back to legacy YAML if present
+config = None
+if _args.config_json:
+    cfg_path = Path(_args.config_json).resolve()
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+    logger.info(f"Loaded config JSON: {cfg_path}")
+else:
+    # Legacy fallback: config.yaml in current working directory
+    try:
+        import yaml  # lazy import (only for legacy mode)
+        with open(Code_dir / "config.yaml", "r") as yamlfile:
+            config = yaml.load(yamlfile, Loader=yaml.FullLoader)
+        logger.warning("Using legacy config.yaml (no --config-json provided).")
+    except Exception as exc:
+        raise RuntimeError("No --config-json provided and legacy config.yaml could not be loaded.") from exc
 
 # Setup directories
-Dataset_dir = Code_dir / 'Dataset'
+Dataset_dir = Path(_args.dataset_dir).resolve() if _args.dataset_dir else (Code_dir / 'Dataset')
+Dataset_dir.mkdir(parents=True, exist_ok=True)
 Avatar_dir = Code_dir / 'Avatars'
 Scene_dir= Code_dir / 'Scenes'
 report_path = Code_dir / 'Report.txt'
@@ -746,6 +786,8 @@ def rendering_random_camera(lighting, itr, camera, target_rig, scene_name, worke
     # creating name tag
     # name_tag =  'TC' + '_' + str(itr) + '_' + scene_name + '_' + target_rig.name.replace('Armature: ', '')
     name_tag = name_tag.replace('TC_', f'TC_{itr}_')
+    if WORKER_ID is not None:
+        name_tag = f"W{WORKER_ID:02d}_" + name_tag
     # creating new folder for new camera location
     os.chdir(Dataset_dir)
     # import ipdb; ipdb.set_trace()
@@ -779,7 +821,8 @@ Main Body
 """
 
 # with open(report_path, 'w') as f:
-logger.info(f'Starting the data generation loop for {Number_of_Image_Sequences} times.')
+logger.info(f"Starting data generation loop for {Number_of_Image_Sequences} sequences. "
+            f"Dataset_dir={Dataset_dir}, logs_dir={logs_dir}, worker_id={WORKER_ID}")
 scenepath = scene_path
 scene_name = scenepath.name.replace('.blend', '')
 
