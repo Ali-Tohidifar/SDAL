@@ -8,9 +8,10 @@ import timm
 from timm.data import resolve_data_config
 from timm.data.transforms_factory import create_transform
 import os
-import subprocess
+import json
 from sdal_utils.sdal_utils import create_data_gen_env
 from sdal_utils.pickle2yolo import pickle2yolo
+from sdal_utils.blender_parallel_runner import run_parallel_generators
 import shutil
 from pathlib import Path
 
@@ -23,7 +24,10 @@ def decomposer(
         top_k=3, 
         decomposer_iterations=3, 
         synth_generation_premutation=3, 
-        generation_framerate=50, 
+        generation_framerate=50,
+        num_containers=3,
+        run_root: Path = None,
+        blender_bin: str = "blender",
         data_gen_env_dir='./sdal_utils/Data_Generator', 
         hdf5_path='./features/features_DenseNet201.hdf5', 
         dataset_dir='./sdal_utils/Data_Generator/Dataset', 
@@ -69,27 +73,13 @@ def decomposer(
         framerate=generation_framerate, 
         top_k=top_k, 
         decomposer_iterations=decomposer_iterations, 
-        synth_generation_premutation=synth_generation_premutation, 
+        synth_generation_premutation=synth_generation_premutation,
+        num_containers=num_containers,
+        run_root=run_root,
+        blender_bin=blender_bin,
         logger=logger)
     
     return True
-
-def generate_data(
-        # data_gen_env_dir='./sdal_utils/Data_Generator', 
-        # empty_dir='./sdal_utils/Data_Generator/Empty.blend', 
-        # code_dir='./sdal_utils/Data_Generator/231109_Adaptive_Data_Generator.py',
-        docker_run_script,
-        logger=None
-        ):
-    if logger:
-        logger.info('Data generation ...')
-    try:
-        # result = subprocess.run(["/bin/bash", docker_run_script], check=True)
-        result = subprocess.run(['sudo', str(docker_run_script)], check=True)
-        logger.debug(f"Data generation engine output: {result.stdout}")
-    except:
-        if logger: logger.error(f"Error running data generation engine")
-    return result.returncode==0
 
 def generate_yolo_labels(input_folders, output_path, save_txt, logger=None):
     labels = []
@@ -99,14 +89,16 @@ def generate_yolo_labels(input_folders, output_path, save_txt, logger=None):
             if not os.path.exists(os.path.join(output_path, 'labels')):
                 os.makedirs(os.path.join(output_path, 'labels'))
             label = pickle2yolo(input_folder, os.path.join(output_path, 'labels'), save_txt=save_txt)
-            logger.info(f"Generated {len(label.values())} number of YOLO labels for {input_folder}")
+            if logger:
+                logger.info(f"Generated {len(label.values())} number of YOLO labels for {input_folder}")
             labels.append(label)
         except Exception as e:
             if logger:
                 logger.error(f"Error generating YOLO labels for {input_folder}: {str(e)}")
             continue
         
-        logger.info(f"Copying {len([file for file in os.listdir(input_folder) if 'jpg' in file])} number of images to {output_path}")
+        if logger:
+            logger.info(f"Copying {len([file for file in os.listdir(input_folder) if 'jpg' in file])} number of images to {output_path}")
         for img in os.listdir(input_folder):
             if '.jpg' not in img:
                 continue
@@ -130,103 +122,127 @@ def oracle(
         decomposer_iterations=3, 
         synth_generation_premutation=3, 
         generation_framerate=50,
+        num_containers=3,
+        blender_bin: str = "blender",
+        oracle_runs_root: str = None,
+        keep_oracle_artifacts: bool = False,
+        failure_case_id: str = None,
         hdf5_path='./features/features_DenseNet201.hdf5', 
         data_gen_env_dir='./sdal_utils/Data_Generator', 
         save_yolo_labels=True, 
         dataset_used_dir='./sdal_utils/Data_Generator/Dataset_used', 
-        data_gen_docker_script='run_blendcon.sh',
         logger=None,
         ) -> tuple:
     
-    data_gen_env_dir = Path(data_gen_env_dir)
+    data_gen_env_dir = Path(data_gen_env_dir).resolve()
     output_path = Path(output_path)
     dataset_used_dir = Path(dataset_used_dir)
 
-    if not dataset_used_dir.exists():
-        os.makedirs(dataset_used_dir)
+    def _unique_run_dir(root: Path, base: str) -> Path:
+        root.mkdir(parents=True, exist_ok=True)
+        safe = "".join(c if (c.isalnum() or c in ("-", "_")) else "_" for c in base).strip("_") or "failure_case"
+        candidate = root / safe
+        if not candidate.exists():
+            return candidate
+        i = 1
+        while (root / f"{safe}-{i}").exists():
+            i += 1
+        return root / f"{safe}-{i}"
 
+    run_root = None
+    input_folders = []
     try:
+        # Decide run-scoped artifact root
+        if oracle_runs_root is None:
+            oracle_runs_root = str(output_path / "_oracle_runs")
+        oracle_runs_root = Path(oracle_runs_root).resolve()
+
+        base_id = failure_case_id or Path(query_image_path).stem
+        run_root = _unique_run_dir(oracle_runs_root, base_id).resolve()
+        run_root.mkdir(parents=True, exist_ok=True)
+
+        if logger:
+            logger.info(f"[oracle] run_root={run_root}")
+
+        # Stage 1: decomposer writes config.json + normalization into run_root
         decomposed = decomposer(
-            query_image=query_image_path, 
-            data_gen_env_dir=data_gen_env_dir, 
-            hdf5_path=hdf5_path, 
-            generation_framerate=generation_framerate, 
+            query_image=query_image_path,
+            data_gen_env_dir=data_gen_env_dir,
+            hdf5_path=hdf5_path,
+            generation_framerate=generation_framerate,
             top_k=top_k,
             image_size=image_size,
-            decomposer_iterations=decomposer_iterations, 
-            synth_generation_premutation=synth_generation_premutation, 
-            avatars_dir=avatars_dir, 
-            scenes_dir=scenes_dir, 
-            scene_collection_dir=scene_collection_dir, 
-            logger=logger
-            )
-        
-        if decomposed:
-            result = generate_data(docker_run_script=data_gen_env_dir / data_gen_docker_script, logger=logger)
-        else:
-            if logger:
-                logger.error("Decomposition failed.")
-            raise ValueError('Decomposition failed')
-        
-        if result:
-            if logger:
-                logger.info('Data generation was successful')
-        else:
-            if logger:
-                logger.error(f"Data generation failed: {result.stdout}\n{result.stderr}")
-            raise ValueError(f'Data generation failed. Unable to run blendcon docker with {data_gen_env_dir / data_gen_docker_script}')
+            decomposer_iterations=decomposer_iterations,
+            synth_generation_premutation=synth_generation_premutation,
+            num_containers=num_containers,
+            run_root=run_root,
+            blender_bin=blender_bin,
+            avatars_dir=avatars_dir,
+            scenes_dir=scenes_dir,
+            scene_collection_dir=scene_collection_dir,
+            logger=logger,
+        )
+        if not decomposed:
+            raise ValueError("Decomposition failed")
 
-        # Process data from all Dataset directories (Dataset_1, Dataset_2, Dataset_3) and add prefix
-        input_folders = []
-        for idx in range(1, 4):
-            dataset_dir = data_gen_env_dir / f'Dataset_{idx}'
-            for folder in os.listdir(dataset_dir):
-                folder_path = dataset_dir / folder
-                if os.path.isdir(folder_path):
-                    # Add a prefix to the folder name to avoid conflicts
-                    new_folder_name = f'D_{idx}_{folder}'
-                    new_folder_path = dataset_dir / new_folder_name
-                    os.rename(folder_path, new_folder_path)  # Rename the folder with the new prefix
-                    input_folders.append(new_folder_path)
+        config_json = run_root / "config.json"
+        if not config_json.exists():
+            raise FileNotFoundError(f"Expected config.json not found at {config_json}")
 
-        logger.info(f"Generating YOLO labels for {input_folders} and moving to {output_path}")
-        labels, example_images = generate_yolo_labels(input_folders, output_path, save_yolo_labels, logger=logger)
-        logger.info(f'Removing generated data to archive: {dataset_used_dir}')
-        for item_path in input_folders:
-            if os.path.exists(item_path):
-                dst = dataset_used_dir / item_path.name
-                exist = os.path.exists(dst)
-                iteration = 0
-                while exist:
-                    iteration += 1
-                    dst = dataset_used_dir / f"{item_path.name}-{iteration}"
-                    exist = os.path.exists(dst)
-                shutil.move(item_path, dst)
-            else:
-                if logger:
-                    logger.error(f"{item_path} not found")
+        # Stage 2: run Blender generators in parallel (no Docker)
+        manifest = run_parallel_generators(
+            blender_bin=blender_bin,
+            empty_blend=(data_gen_env_dir / "Empty.blend").resolve(),
+            generator_py=(data_gen_env_dir / "231109_Adaptive_Data_Generator.py").resolve(),
+            config_json=config_json.resolve(),
+            run_root=run_root,
+            data_gen_env_dir=data_gen_env_dir.resolve(),
+            num_workers=int(num_containers),
+            logger=logger,
+        )
+
+        # Collect generated sequence folders
+        for wid in range(1, int(num_containers) + 1):
+            dataset_dir = run_root / f"worker_{wid:02d}" / "Dataset"
+            if not dataset_dir.exists():
                 continue
+            for p in dataset_dir.iterdir():
+                if p.is_dir():
+                    input_folders.append(p)
+
+        if not input_folders:
+            raise ValueError(
+                f"Synthetic generation produced no sequences. Inspect {run_root}/manifest.json and worker logs."
+            )
+
+        if logger:
+            logger.info(f"[oracle] generating YOLO labels from {len(input_folders)} sequences into {output_path}")
+
+        labels, example_images = generate_yolo_labels(input_folders, output_path, save_yolo_labels, logger=logger)
+
+        # Cleanup raw datasets if requested
+        if not keep_oracle_artifacts:
+            for wid in range(1, int(num_containers) + 1):
+                dataset_dir = run_root / f"worker_{wid:02d}" / "Dataset"
+                if dataset_dir.exists():
+                    shutil.rmtree(dataset_dir, ignore_errors=True)
+            if logger:
+                logger.info(f"[oracle] cleaned raw datasets under {run_root} (kept logs + manifest)")
+        else:
+            if logger:
+                logger.info(f"[oracle] keeping full raw artifacts under {run_root}")
+
+        # dataset_used_dir is kept for backward compatibility but no longer used in docker-free mode
+        if logger and dataset_used_dir:
+            logger.debug(f"[oracle] dataset_used_dir={dataset_used_dir} (not used in docker-free mode)")
 
         return labels, example_images
 
     except Exception as e:
         if logger:
             logger.error(f"Error in oracle function: {str(e)}")
-            logger.info(f'Removing incomplete generated data to archive: {dataset_used_dir}')
-        for item_path in input_folders:
-            if os.path.exists(item_path):
-                dst = dataset_used_dir / item_path.name
-                exist = os.path.exists(dst)
-                iteration = 0
-                while exist:
-                    iteration += 1
-                    dst = dataset_used_dir / f"{item_path.name}-{iteration}"
-                    exist = os.path.exists(dst)
-                shutil.move(item_path, dst)
-            else:
-                if logger:
-                    logger.error(f"{item_path} not found")
-                continue
+            if run_root is not None:
+                logger.error(f"[oracle] artifacts retained at: {run_root}")
         raise
 
 
