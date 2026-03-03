@@ -1,0 +1,8 @@
+# Mode-A Global Holdout Configuration for SDAL Mode-B Experiment
+# This file points to the global holdout set for unbiased evaluation
+
+train: /home/ali_tohidi/SDAL+/datasets/site_splits/lash_site_v1/modeA/pool_no_holdout_no_buffer/images
+val: /home/ali_tohidi/SDAL+/datasets/site_splits/lash_site_v1/modeA/pool_no_holdout_no_buffer/images
+test: /home/ali_tohidi/SDAL+/datasets/site_splits/lash_site_v1/modeA/global_holdout/images
+nc: 1
+names: ["worker"]

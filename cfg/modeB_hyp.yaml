@@ -1,0 +1,53 @@
+# Mode-B Hyperparameters for SDAL Day-by-Day Experiment
+# This configuration runs the original SDAL with prequential evaluation
+
+# Number of simulated days (Mode-B iterations)
+num_days: 10
+
+# Training epochs per day
+synth_epochs: 100
+real_epochs: 50
+combined_epochs: 150
+
+# Device configuration
+device: 0  # 0 for GPU, "cpu" for CPU
+
+# Failure case mining
+failure_cases_per_day: 20
+confidence_based: false  # Use loss-based ranking (not confidence-based)
+
+# Synthetic data generation parameters
+generation_framerate: 75
+synth_generation_permutation: 2
+num_containers: 5  # Number of parallel Blender generator workers
+blender_bin: /snap/bin/blender  # Path to Blender executable (used for docker-free synthgen + normalization)
+keep_oracle_artifacts: false  # If true, keep raw per-worker Dataset trees under dayXX/oracle_runs for debugging
+
+# Oracle (decomposer) parameters
+decomposer_iterations: 3
+top_k: 3
+
+# Image size for training
+image_size: 416
+
+# Training mode: "combined" or "sequential"
+training_mode: combined
+
+# Batch size for training
+batch_size: 256
+
+# Evaluation batch size
+eval_batch_size: 8
+
+# Number of dataloader workers
+workers: 8
+
+# Confidence threshold for detections during mining
+conf_thres: 0.001
+
+# IoU threshold for NMS
+iou_thres: 0.6
+
+# WandB configuration (optional)
+use_wandb: false
+wandb_project_name: 'SDAL-ModeB-Baseline'

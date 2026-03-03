@@ -1,0 +1,70 @@
+# Mode-B Paths Configuration for SDAL Day-by-Day Experiment
+# Paths for datasets, models, and assets
+
+# ============================================
+# SDAL+ Dataset Paths (site_splits)
+# ============================================
+
+# Root directory for Mode-B day splits
+modeB_root: /home/ali_tohidi/SDAL+/datasets/site_splits/lash_site_v1/modeB
+
+# Global holdout data YAML (Mode-A)
+holdout_data_yaml: /home/ali_tohidi/Desktop/SDAL/data_cfg/modeB/data_modeA.yaml
+
+# Warmup training images (source domain)
+warmup_train_images: /home/ali_tohidi/SDAL+/datasets/real_5k/train/images
+warmup_train_labels: /home/ali_tohidi/SDAL+/datasets/real_5k/train/labels
+
+# ============================================
+# Model Weights
+# ============================================
+
+# Warmup model weights (M_0)
+warmed_up_model_weights: ./yolov7/runs/sucessful_train/warmup_real_5k_416/weights/best.pt
+
+# ============================================
+# SDAL Oracle Assets (local to SDAL repo)
+# ============================================
+
+# Feature database for image retrieval
+hdf5_path: ./features/features_DenseNet201.hdf5
+
+# Synthetic data generator paths
+data_gen_env_dir: ./sdal_utils/Data_Generator
+dataset_used_dir: ./sdal_utils/Data_Generator/Dataset_used
+
+# Data generation assets
+# NOTE: These symlinks may need to be updated if Mount_D is not accessible
+# Alternative location: /home/ali_tohidi/Desktop/Data_Generator/Avatars
+avatar_dir: ./sdal_utils/Data_Generator/Avatars
+scene_dir: ./sdal_utils/Data_Generator/Scenes
+empty_dir: ./sdal_utils/Data_Generator/Empty.blend
+horizon_dir: ./sdal_utils/Data_Generator/Horizon.blend
+report_dir: ./sdal_utils/Data_Generator/Report.txt
+BlendCon_dir: ./sdal_utils/Data_Generator/231109_Adaptive_Data_Generator.py
+
+# Scene collection for coordinate normalization
+old_scene_collection_dir: /home/ali_tohidi/Desktop/Mount_Ext/BlendCon/Data_Generator_WorkerDetection/Old_3DAssets/Scenes
+
+# ============================================
+# Output Paths
+# ============================================
+
+# Experiment output root
+experiments_root: ./experiments/modeB_runs
+
+# Log directory
+log_dir: ./logs/modeB
+
+# Synthetic data output (per-run)
+synth_output_root: ./experiments/modeB_runs/synth_data
+
+# ============================================
+# YOLO Training Paths
+# ============================================
+
+# YOLOv7 training project directory
+yolo_project_dir: ./yolov7/runs/train
+
+# YOLO data configs directory
+data_cfg_dir: ./data_cfg/modeB
