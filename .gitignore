@@ -65,6 +65,7 @@ Thumbs.db
 yolov7/runs/
 sdal_utils/Data_Generator/Dataset_*/
 sdal_utils/Data_Generator/Dataset_used/
+sdal_utils/Data_Generator/query_retrieved_imgs.csv
 
 # Large 3D assets (Blender files, 3D models)
 *.blend
@@ -83,4 +84,5 @@ sdal_utils/Data_Generator/Horizon.blend
 *.pyc
 *.tmp
 
-GIT_PUSH_INSTRUCTIONS.md
+# Environment
+.env

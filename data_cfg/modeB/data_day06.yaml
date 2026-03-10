@@ -1,8 +1,0 @@
-# Day 06 Data Configuration for SDAL Mode-B Experiment
-# Videos: lash-enc/vid6, lash-3rd/vid6
-
-train: /home/ali_tohidi/SDAL+/datasets/site_splits/lash_site_v1/modeB/day06/mine/images
-val: /home/ali_tohidi/SDAL+/datasets/site_splits/lash_site_v1/modeB/day06/mine/images
-test: /home/ali_tohidi/SDAL+/datasets/site_splits/lash_site_v1/modeB/day06/eval/images
-nc: 1
-names: ["worker"]

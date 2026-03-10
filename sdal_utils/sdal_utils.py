@@ -596,24 +596,19 @@ def pram_retreival(query_image_path, model, transform, device, hdf5_path,  datas
     # Select the most probable image and its score
     most_probable, score = select_most_probable_image(image_scores)
     
-    # Path translation from Windows HDF5 to Linux paths
     if isinstance(most_probable, bytes):
         most_probable = most_probable.decode('utf-8')
     
-    # Convert path separators to be compatible with the current OS
     most_probable = most_probable.replace('\\', '/')
     
-    # Translate Windows path to Linux path
-    # Windows: D:/SyntheticData_SDAL_Features/raw_dataset/...
-    # Linux: /home/ali_tohidi/Desktop/Mount_Ext/SDAL/SyntheticData_SDAL_Features/raw_dataset/...
-    if most_probable.startswith('D:/SyntheticData_SDAL_Features'):
-        most_probable = most_probable.replace(
-            'D:/SyntheticData_SDAL_Features',
-            '/home/ali_tohidi/Desktop/Mount_Ext/SDAL/SyntheticData_SDAL_Features'
-        )
-    
-    # Debug
-    print(f"Adjusted path: {most_probable}")
+    # If HDF5 was built on a different OS, translate the stored paths.
+    # Set SDAL_HDF5_PATH_PREFIX and SDAL_HDF5_PATH_REPLACE env vars to remap, e.g.:
+    #   export SDAL_HDF5_PATH_PREFIX="D:/SyntheticData_SDAL_Features"
+    #   export SDAL_HDF5_PATH_REPLACE="/mnt/data/SyntheticData_SDAL_Features"
+    prefix = os.environ.get('SDAL_HDF5_PATH_PREFIX')
+    replace = os.environ.get('SDAL_HDF5_PATH_REPLACE')
+    if prefix and replace and most_probable.startswith(prefix):
+        most_probable = most_probable.replace(prefix, replace)
     #########################################################
     # Extract and print the image name
     most_probable_image_label_path = get_image_label_path(most_probable)
